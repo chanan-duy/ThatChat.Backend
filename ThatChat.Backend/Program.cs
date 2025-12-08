@@ -6,8 +6,6 @@ using Scalar.AspNetCore;
 using ThatChat.Backend.Data;
 using ThatChat.Backend.Hubs;
 
-// Создадим позже
-
 var builder = WebApplication.CreateBuilder(args);
 
 var connString = builder.Configuration.GetConnectionString("AppDbContext") ??
@@ -71,22 +69,7 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-app.Use(async (context, next) =>
-{
-	var ip = context.Connection.RemoteIpAddress?.ToString() ?? "-";
-	var user = context.User.Identity?.Name ?? "-";
-	var time = DateTime.Now.ToString("dd/MMM/yyyy:HH:mm:ss zzz");
-	var method = context.Request.Method;
-	var path = context.Request.Path;
-	var protocol = context.Request.Protocol;
-
-	await next();
-
-	var status = context.Response.StatusCode;
-	var logLine = $"{ip} - {user} [{time}] \"{method} {path} {protocol}\" {status} -\n";
-
-	await File.AppendAllTextAsync("access.log", logLine);
-});
+app.Use(LogMiddleware);
 
 if (app.Environment.IsDevelopment())
 {
@@ -109,7 +92,7 @@ app.UseAuthorization();
 
 app.MapGroup("/api/auth").MapIdentityApi<AppUserEnt>();
 
-app.MapPost("/api/upload", async (IFormFile file) =>
+app.MapPost("/api/upload", async (IFormFile? file) =>
 	{
 		if (file == null || file.Length == 0)
 		{
@@ -117,7 +100,7 @@ app.MapPost("/api/upload", async (IFormFile file) =>
 		}
 
 		var ext = Path.GetExtension(file.FileName);
-		var newName = $"{Guid.NewGuid()}{ext}";
+		var newName = $"{Guid.CreateVersion7()}{ext}";
 
 		var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
 		if (!Directory.Exists(uploadPath))
@@ -135,7 +118,8 @@ app.MapPost("/api/upload", async (IFormFile file) =>
 		var fileUrl = $"/uploads/{newName}";
 		return Results.Ok(new { Url = fileUrl });
 	})
-	.RequireAuthorization();
+	.RequireAuthorization()
+	.DisableAntiforgery();
 
 app.MapGet("/api/chats", async (AppDbContext db, ClaimsPrincipal user) =>
 	{
@@ -153,6 +137,51 @@ app.MapGet("/api/chats", async (AppDbContext db, ClaimsPrincipal user) =>
 			.ToListAsync();
 
 		return Results.Ok(chats);
+	})
+	.RequireAuthorization();
+
+
+app.MapPost("/api/chats", async (CreateChatRequest req, AppDbContext db, ClaimsPrincipal user) =>
+	{
+		var currentUserId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+		var targetUser = await db.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
+		if (targetUser == null)
+		{
+			return Results.NotFound("Пользователь с таким Email не найден");
+		}
+
+		if (targetUser.Id == currentUserId)
+		{
+			return Results.BadRequest("Нельзя создать чат с самим собой");
+		}
+
+		var existingChat = await db.Chats
+			.Where(c => !c.IsGlobal)
+			.Where(c => c.ChatUsers.Any(cu => cu.UserId == currentUserId) &&
+			            c.ChatUsers.Any(cu => cu.UserId == targetUser.Id))
+			.FirstOrDefaultAsync();
+
+		if (existingChat != null)
+		{
+			return Results.Ok(new { existingChat.Id, existingChat.Name, existingChat.IsGlobal });
+		}
+
+		var newChat = new ChatEnt
+		{
+			Id = Guid.NewGuid(),
+			Name = targetUser.Email,
+			IsGlobal = false,
+		};
+
+		db.Chats.Add(newChat);
+
+		db.ChatUsers.Add(new ChatUserEnt { ChatId = newChat.Id, UserId = currentUserId });
+		db.ChatUsers.Add(new ChatUserEnt { ChatId = newChat.Id, UserId = targetUser.Id });
+
+		await db.SaveChangesAsync();
+
+		return Results.Ok(new { newChat.Id, newChat.Name, newChat.IsGlobal });
 	})
 	.RequireAuthorization();
 
@@ -183,3 +212,26 @@ app.MapHub<ChatHub>("/hubs/chat");
 app.MapGet("/", () => "Running");
 
 app.Run();
+
+return;
+
+async Task LogMiddleware(HttpContext context, Func<Task> next)
+{
+	var ip = context.Connection.RemoteIpAddress?.ToString() ?? "-";
+	var user = context.User.Identity?.Name ?? "-";
+	var time = DateTime.Now.ToString("dd/MMM/yyyy:HH:mm:ss zzz");
+	var method = context.Request.Method;
+	var path = context.Request.Path;
+	var protocol = context.Request.Protocol;
+
+	await next();
+
+	var status = context.Response.StatusCode;
+	var logLine = $"{ip} - {user} [{time}] \"{method} {path} {protocol}\" {status} -\n";
+
+	var logPath = Path.Combine("Logs", "access.log");
+
+	await File.AppendAllTextAsync(logPath, logLine);
+}
+
+internal record CreateChatRequest(string Email);
