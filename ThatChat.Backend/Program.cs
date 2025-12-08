@@ -1,14 +1,16 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using ThatChat.Backend.Data;
+using ThatChat.Backend.Hubs;
 
 // Создадим позже
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connString = builder.Configuration.GetConnectionString("DefaultConnection") ??
+var connString = builder.Configuration.GetConnectionString("AppDbContext") ??
                  throw new InvalidOperationException("Connection string 'AppDbContext' not found.");
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connString));
@@ -95,7 +97,7 @@ if (app.Environment.IsDevelopment())
 	}
 
 	app.MapOpenApi();
-	app.MapScalarApiReference(); // http://localhost:5000/scalar
+	app.MapScalarApiReference(); // http://localhost:5042/scalar
 }
 
 app.UseCors();
@@ -107,9 +109,77 @@ app.UseAuthorization();
 
 app.MapGroup("/api/auth").MapIdentityApi<AppUserEnt>();
 
-// Мапим наш будущий Хаб
-// app.MapHub<ChatHub>("/hubs/chat");
+app.MapPost("/api/upload", async (IFormFile file) =>
+	{
+		if (file == null || file.Length == 0)
+		{
+			return Results.BadRequest("No file uploaded");
+		}
 
-app.MapGet("/", () => "Chat Backend v1.0 running");
+		var ext = Path.GetExtension(file.FileName);
+		var newName = $"{Guid.NewGuid()}{ext}";
+
+		var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+		if (!Directory.Exists(uploadPath))
+		{
+			Directory.CreateDirectory(uploadPath);
+		}
+
+		var fullPath = Path.Combine(uploadPath, newName);
+
+		await using (var stream = new FileStream(fullPath, FileMode.Create))
+		{
+			await file.CopyToAsync(stream);
+		}
+
+		var fileUrl = $"/uploads/{newName}";
+		return Results.Ok(new { Url = fileUrl });
+	})
+	.RequireAuthorization();
+
+app.MapGet("/api/chats", async (AppDbContext db, ClaimsPrincipal user) =>
+	{
+		var userId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+		var chats = await db.Chats
+			.Include(c => c.ChatUsers)
+			.Where(c => c.IsGlobal || c.ChatUsers.Any(cu => cu.UserId == userId))
+			.Select(c => new
+			{
+				c.Id,
+				c.Name,
+				c.IsGlobal,
+			})
+			.ToListAsync();
+
+		return Results.Ok(chats);
+	})
+	.RequireAuthorization();
+
+app.MapGet("/api/chats/{chatId:guid}/messages", async (Guid chatId, AppDbContext db) =>
+	{
+		var messages = await db.Messages
+			.Where(m => m.ChatId == chatId)
+			.OrderBy(m => m.CreatedAt)
+			.Select(m => new
+			{
+				m.Id,
+				m.ChatId,
+				m.SenderId,
+				SenderEmail = m.Sender.Email,
+				m.Text,
+				m.FileUrl,
+				m.CreatedAt,
+			})
+			.ToListAsync();
+
+		return Results.Ok(messages);
+	})
+	.RequireAuthorization();
+
+
+app.MapHub<ChatHub>("/hubs/chat");
+
+app.MapGet("/", () => "Running");
 
 app.Run();
