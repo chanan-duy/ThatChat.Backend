@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using ThatChat.Backend.Dto;
@@ -70,5 +71,36 @@ public class ChatApiTests
 		var chat = await response.Content.ReadFromJsonAsync<ChatDto>();
 		chat.Should().NotBeNull();
 		chat.Name.Should().Be("userB@test.com");
+	}
+
+	[Test]
+	public async Task Upload_ShouldFail_WhenFileIsTooLarge()
+	{
+		var token = await RegisterAndLogin("uploader@test.com", "pass1234");
+		_client.DefaultRequestHeaders.Authorization =
+			new AuthenticationHeaderValue("Bearer", token);
+
+		var largeContent = new ByteArrayContent(new byte[20 * 1024 * 1024 + 1]);
+		var multipart = new MultipartFormDataContent();
+		multipart.Add(largeContent, "file", "large.png");
+
+		var response = await _client.PostAsync("/api/upload", multipart);
+
+		response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+	}
+
+	[Test]
+	public async Task Middleware_ShouldHandleConcurrentRequests()
+	{
+		var tasks = new List<Task>();
+		for (var i = 0; i < 50; i++)
+		{
+			tasks.Add(_client.GetAsync("/"));
+		}
+
+		await Task.WhenAll(tasks);
+
+		var logsExist = Directory.GetFiles("Logs", "access-*.log").Length != 0;
+		logsExist.Should().BeTrue();
 	}
 }

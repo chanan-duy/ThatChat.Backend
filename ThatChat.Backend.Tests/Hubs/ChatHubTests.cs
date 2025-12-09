@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.SignalR.Client;
 using ThatChat.Backend.Data;
@@ -67,5 +68,56 @@ public class ChatHubTests
 		receivedMessages.Should().ContainSingle();
 		receivedMessages[0].Text.Should().Be(messageText);
 		receivedMessages[0].SenderEmail.Should().Be("hubuser@test.com");
+	}
+
+	[Test]
+	public async Task JoinChat_ShouldNotReceiveMessages_IfUserHasNoAccess()
+	{
+		var client = _factory.CreateClient();
+
+		var hackerToken = await GetAccessToken(client, "hacker@test.com");
+		var victimToken = await GetAccessToken(client, "victim@test.com");
+
+		await client.PostAsJsonAsync("/api/auth/register", new { email = "other@test.com", password = "password" });
+
+		client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", victimToken);
+
+		var chatRes = await client.PostAsJsonAsync("/api/chats", new CreateChatRequest("other@test.com"));
+
+		chatRes.EnsureSuccessStatusCode();
+
+		var chat = await chatRes.Content.ReadFromJsonAsync<ChatDto>();
+
+		var hackerConnection = new HubConnectionBuilder()
+			.WithUrl("http://localhost/hubs/chat", o =>
+			{
+				o.AccessTokenProvider = () => Task.FromResult<string?>(hackerToken);
+				o.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
+			})
+			.Build();
+
+		var receivedMessages = new List<ChatMessageDto>();
+		hackerConnection.On<ChatMessageDto>("ReceiveChatMessage", msg => receivedMessages.Add(msg));
+		await hackerConnection.StartAsync();
+
+		await hackerConnection.InvokeAsync("JoinChat", chat!.Id);
+
+		var victimConnection = new HubConnectionBuilder()
+			.WithUrl("http://localhost/hubs/chat", o =>
+			{
+				o.AccessTokenProvider = () => Task.FromResult<string?>(victimToken);
+				o.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
+			})
+			.Build();
+
+		await victimConnection.StartAsync();
+		await victimConnection.InvokeAsync("SendMessage", chat.Id, "Secret Message", null);
+
+		await Task.Delay(200);
+
+		receivedMessages.Should().BeEmpty();
+
+		await hackerConnection.DisposeAsync();
+		await victimConnection.DisposeAsync();
 	}
 }

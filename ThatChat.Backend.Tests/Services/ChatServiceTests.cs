@@ -64,4 +64,27 @@ public class ChatServiceTests
 
 		result.Should().BeNull();
 	}
+
+	[Test]
+	public async Task SaveMessage_ShouldReturnNull_WhenMessageIsTooLong()
+	{
+		var user = new AppUserEnt { Id = Guid.NewGuid(), Email = "test@test.com", UserName = "test" };
+		var chat = new ChatEnt { Id = Guid.NewGuid(), IsGlobal = true };
+		_context.Users.Add(user);
+		_context.Chats.Add(chat);
+		await _context.SaveChangesAsync();
+
+		var longMessage = new string('a', 10_001);
+		var result = await _service.SaveMessageAsync(user.Id, chat.Id, longMessage, null);
+
+		result.Should().BeNull();
+	}
+
+	[Test]
+	public async Task SaveMessage_ShouldReturnNull_WhenMessageAndFileAreEmpty()
+	{
+		var result = await _service.SaveMessageAsync(Guid.NewGuid(), Guid.NewGuid(), "   ", null);
+
+		result.Should().BeNull();
+	}
 }
