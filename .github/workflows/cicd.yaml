@@ -37,11 +37,12 @@ jobs:
 
       - name: Build
         run: |
-          dotnet build -c Release
+          dotnet build --no-restore -c Release
 
       - name: Unit Tests
         run: |
           dotnet test  \
+            --no-restore \
             --verbosity normal \
             --logger "trx;LogFileName=test_results.trx" \
             --results-directory ./TestResults
