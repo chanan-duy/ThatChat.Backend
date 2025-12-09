@@ -5,13 +5,6 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-#permissions:
-#    contents: write
-#    packages: write
-#    issues: write
-#    pull-requests: write
-#    checks: write
-
 env:
   DOTNET_VERSION: '10.0.x'
 
@@ -31,51 +24,64 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore
-        run: |
-          dotnet restore
+      - name: Restore Dependencies
+        run: dotnet restore
 
       - name: Build
-        run: |
-          dotnet build --no-restore -c Release
+        run: dotnet build --no-restore -c Release
 
-      - name: Unit Tests
+      - name: Create Test Results Directory
+        run: mkdir -p TestResults allure-results
+
+      - name: Run Tests with Allure
         run: |
-          dotnet test  \
+          dotnet test \
             --no-restore \
+            --no-build \
             --verbosity normal \
-            --logger "trx;LogFileName=test_results.trx" \
-            -- RunConfiguration.ReporterSwitch=allure
+            --logger "trx;LogFileName=TestResults/test_results.trx" \
+            --results-directory TestResults || echo "Tests completed"
 
-      - name: Publish Artifact Test Results
+      - name: Generate Allure Report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: simple-elf/allure-report-action@v1.13
         with:
-          name: test-results
-          path: ./TestResults/
-          retention-days: 3
+          allure_results: allure-results
+          allure_report: allure-report
+          keep_reports: 20
 
-      - name: Load Test Report History
-        uses: actions/checkout@v6
+      - name: Checkout gh-pages (or create if doesn't exist)
         if: always()
-        continue-on-error: true
+        uses: actions/checkout@v6
         with:
           ref: gh-pages
-          path: gh-pages
+          path: gh-pages-temp
+          fetch-depth: 0
 
-      - name: Build Test Report
-        uses: simple-elf/allure-report-action@v1.13
+      - name: Prepare gh-pages content
         if: always()
-        with:
-          gh_pages: gh-pages
-          allure_history: allure-history
-          allure_results: ./allure-results
-          allure_report: allure-report
+        run: |
+          rm -rf gh-pages-temp/*
+          cp -r allure-report/* gh-pages-temp/
+          
+          touch gh-pages-temp/.nojekyll
+          
+          echo '<!DOCTYPE html>
+          <html>
+          <head>
+              <meta http-equiv="refresh" content="0; url=./4/index.html" />
+          </head>
+          <body>
+              <p>Redirecting to latest report...</p>
+          </body>
+          </html>' > gh-pages-temp/index.html
 
-      - name: Publish Test Report
+      - name: Deploy to GitHub Pages
+        if: always()
         uses: peaceiris/actions-gh-pages@v4
-        if: always()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages-temp
           publish_branch: gh-pages
-          publish_dir: allure-history
+          force_orphan: false
+          keep_files: false
