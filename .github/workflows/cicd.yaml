@@ -45,11 +45,11 @@ jobs:
             --no-restore \
             --verbosity normal \
             --logger "trx;LogFileName=test_results.trx" \
-            --results-directory ./TestResults
+            -- RunConfiguration.ReporterSwitch=allure
 
       - name: Publish Artifact Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-results
           path: ./TestResults/
@@ -69,7 +69,8 @@ jobs:
         with:
           gh_pages: gh-pages
           allure_history: allure-history
-          allure_results: ./ThatChat.Backend/ThatChat.Backend/ThatChat.Backend.Tests/bin/Release/net10.0/allure-results
+          allure_results: ./allure-results
+          allure_report: allure-report
 
       - name: Publish Test Report
         uses: peaceiris/actions-gh-pages@v4
@@ -78,9 +79,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
-#
-#      - name: Test Report
-#        if: always()
-#        uses: EnricoMi/publish-unit-test-result-action@v2
-#        with:
-#          files: 'TestResults/*.trx'
