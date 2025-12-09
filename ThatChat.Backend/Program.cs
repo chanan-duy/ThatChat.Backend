@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -52,11 +53,13 @@ builder.Services.Configure<BearerTokenOptions>(IdentityConstants.BearerScheme, o
 	};
 });
 
+var corsOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>() ??
+                  throw new InvalidOperationException("String 'CorsOrigins' not found.");
 builder.Services.AddCors(options =>
 {
 	options.AddDefaultPolicy(policy =>
 	{
-		policy.WithOrigins("http://localhost:5173")
+		policy.WithOrigins(corsOrigins)
 			.AllowAnyHeader()
 			.AllowAnyMethod()
 			.AllowCredentials();
@@ -229,9 +232,10 @@ async Task LogMiddleware(HttpContext context, Func<Task> next)
 	var status = context.Response.StatusCode;
 	var logLine = $"{ip} - {user} [{time}] \"{method} {path} {protocol}\" {status} -\n";
 
-	var logPath = Path.Combine("Logs", "access.log");
+	var logPath = Path.Combine("Logs", $"access-{DateTime.Now:yyyy-MM-dd_HH-mm-ss_zzz}.log");
 
 	await File.AppendAllTextAsync(logPath, logLine);
 }
 
+[UsedImplicitly]
 internal record CreateChatRequest(string Email);
