@@ -28,16 +28,13 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore -c Release
+        run: dotnet build --no-restore -c Release /p:ContinuousIntegrationBuild=true
 
       - name: Run Tests with Allure
         run: |
           dotnet test \
             --no-restore \
-            --no-build \
-            --verbosity normal \
-            --logger "trx;LogFileName=TestResults/test_results.trx" \
-            --results-directory TestResults
+            --no-build
 
       - name: Load Test Report History
         uses: actions/checkout@v6
