@@ -6,6 +6,13 @@ namespace ThatChat.Backend.Dto;
 public record CreateChatRequest(string Email);
 
 [UsedImplicitly]
+public record ChatDto(
+	Guid Id,
+	string? Name,
+	bool IsGlobal
+);
+
+[UsedImplicitly]
 public record ChatMessageDto(
 	Guid Id,
 	Guid ChatId,

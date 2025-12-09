@@ -9,6 +9,7 @@ namespace ThatChat.Backend.Hubs;
 public interface IChatClient
 {
 	Task ReceiveChatMessage(ChatMessageDto message);
+	Task ReceiveNewChat(ChatDto chat);
 }
 
 [Authorize]
