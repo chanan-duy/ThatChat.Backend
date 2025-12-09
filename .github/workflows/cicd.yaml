@@ -1,0 +1,59 @@
+﻿name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+#permissions:
+#    contents: write
+#    packages: write
+#    issues: write
+#    pull-requests: write
+#    checks: write
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build-test:
+    name: Build, Test, SAST & Pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: |
+          dotnet restore
+
+      - name: Build
+        run: |
+          dotnet build -c Release
+
+      - name: Unit Tests
+        run: |
+          dotnet test  \
+            --verbosity normal \
+            --logger "trx;LogFileName=test_results.trx" \
+            --results-directory ./TestResults
+
+      - name: Publish Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults/
+          retention-days: 3
+#
+#      - name: Test Report
+#        if: always()
+#        uses: EnricoMi/publish-unit-test-result-action@v2
+#        with:
+#          files: 'TestResults/*.trx'
