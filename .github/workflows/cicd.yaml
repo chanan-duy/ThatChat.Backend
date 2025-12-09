@@ -27,11 +27,16 @@ jobs:
       - name: Restore Dependencies
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --no-restore -c Release
+      - name: Build Project
+        run: |
+          dotnet build ThatChat.Backend/ThatChat.Backend.csproj --no-restore -c Release /p:ContinuousIntegrationBuild=true
+          dotnet build ThatChat.Backend.Tests/ThatChat.Backend.Tests.csproj --no-restore /p:ContinuousIntegrationBuild=true
 
       - name: Run Tests with Allure
-        run: dotnet test --no-restore --no-build
+        run: |
+          dotnet test \
+            --no-restore \
+            --no-build
 
       - name: Load Test Report History
         uses: actions/checkout@v6
