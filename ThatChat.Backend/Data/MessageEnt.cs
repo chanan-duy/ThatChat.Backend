@@ -1,5 +1,7 @@
 ﻿namespace ThatChat.Backend.Data;
 
+// ReSharper disable PropertyCanBeMadeInitOnly.Global
+// ReSharper disable EntityFramework.ModelValidation.UnlimitedStringLength
 public class MessageEnt
 {
 	public Guid Id { get; set; }

@@ -37,7 +37,6 @@ public class ChatService(AppDbContext db) : IChatService
 			SenderId = userId,
 			Text = message,
 			FileUrl = fileUrl,
-			CreatedAt = DateTime.UtcNow,
 		};
 
 		db.Messages.Add(msgEnt);
