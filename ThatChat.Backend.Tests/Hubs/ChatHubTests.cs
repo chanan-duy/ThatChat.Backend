@@ -120,4 +120,42 @@ public class ChatHubTests
 		await hackerConnection.DisposeAsync();
 		await victimConnection.DisposeAsync();
 	}
+
+	[Test]
+	public async Task CreateChat_ShouldNotifyTargetUser_ViaSignalR()
+	{
+		var client = _factory.CreateClient();
+
+		var senderToken = await GetAccessToken(client, "sender@test.com");
+		var receiverToken = await GetAccessToken(client, "receiver@test.com");
+
+		var receiverConnection = new HubConnectionBuilder()
+			.WithUrl("http://localhost/hubs/chat", o =>
+			{
+				o.AccessTokenProvider = () => Task.FromResult<string?>(receiverToken);
+				o.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
+			})
+			.Build();
+
+		var receivedChats = new List<ChatDto>();
+		receiverConnection.On<ChatDto>("ReceiveNewChat", chat => receivedChats.Add(chat));
+		await receiverConnection.StartAsync();
+
+		client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", senderToken);
+
+		var response = await client.PostAsJsonAsync("/api/chats", new CreateChatRequest("receiver@test.com"));
+		response.EnsureSuccessStatusCode();
+
+		var timeout = DateTime.Now.AddSeconds(2);
+		while (receivedChats.Count == 0 && DateTime.Now < timeout)
+		{
+			await Task.Delay(50);
+		}
+
+		receivedChats.Should().ContainSingle();
+
+		receivedChats[0].Name.Should().Be("receiver@test.com");
+
+		await receiverConnection.DisposeAsync();
+	}
 }
