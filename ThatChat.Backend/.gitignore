@@ -3,3 +3,4 @@
 *.db-wal
 Logs/**
 wwwroot/uploads/
+!ExampleSources/TempAppDbContext.db
