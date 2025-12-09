@@ -21,7 +21,7 @@ public static class UploadEndpoint
 
 						if (file.Length >= maxFileSizeBytes)
 						{
-							return Results.BadRequest($"Max file size is: {maxFileSizeBytes} bytes");
+							return Results.BadRequest($"Max file size is: {maxFileSizeBytes:N2} bytes");
 						}
 
 						var fileUrl = await uploader.UploadFileToRemote(file);

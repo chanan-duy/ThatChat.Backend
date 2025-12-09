@@ -15,10 +15,18 @@ public class FileUploaderService(ILogger<FileUploaderService> logger) : IFileUpl
 
 		var fullPath = Path.Combine(uploadPath, newName);
 
+		logger.LogInformation("Uploading to path: {FullPath}", fullPath);
+		logger.LogInformation("File size: {FileSize:N2} bytes, {FileSizeKiB:N2} KiB, {FileSizeMiB:N2} MiB",
+			file.Length,
+			file.Length / 1024f,
+			file.Length / 1024f / 1024f);
+
 		await using (var stream = new FileStream(fullPath, FileMode.Create))
 		{
 			await file.CopyToAsync(stream);
 		}
+
+		logger.LogInformation("Uploaded {FullPath}", fullPath);
 
 		var fileUrl = $"/uploads/{newName}";
 
