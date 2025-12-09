@@ -68,7 +68,7 @@ jobs:
         with:
           gh_pages: gh-pages
           allure_history: allure-history
-          allure_results: ThatChat.Backend/ThatChat.Backend.Tests/bin/Release/net10.0/allure-results
+          allure_results: ./ThatChat.Backend/ThatChat.Backend/ThatChat.Backend.Tests/bin/Release/net10.0/allure-results
 
       - name: Publish Test Report
         uses: peaceiris/actions-gh-pages@v4
