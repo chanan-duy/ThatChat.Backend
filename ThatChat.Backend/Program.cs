@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using ThatChat.Backend.Data;
 using ThatChat.Backend.Hubs;
+using ThatChat.Backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,9 +71,11 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddSignalR();
 
+builder.Services.AddScoped<LogMiddlewareService>();
+
 var app = builder.Build();
 
-app.Use(LogMiddleware);
+app.UseMiddleware<LogMiddlewareService>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -217,25 +220,6 @@ app.MapGet("/", () => "Running");
 app.Run();
 
 return;
-
-async Task LogMiddleware(HttpContext context, Func<Task> next)
-{
-	var ip = context.Connection.RemoteIpAddress?.ToString() ?? "-";
-	var user = context.User.Identity?.Name ?? "-";
-	var time = DateTime.Now.ToString("dd/MMM/yyyy:HH:mm:ss zzz");
-	var method = context.Request.Method;
-	var path = context.Request.Path;
-	var protocol = context.Request.Protocol;
-
-	await next();
-
-	var status = context.Response.StatusCode;
-	var logLine = $"{ip} - {user} [{time}] \"{method} {path} {protocol}\" {status} -\n";
-
-	var logPath = Path.Combine("Logs", $"access-{DateTime.Now:yyyy-MM-dd_HH-mm-ss_zzz}.log");
-
-	await File.AppendAllTextAsync(logPath, logLine);
-}
 
 [UsedImplicitly]
 internal record CreateChatRequest(string Email);
