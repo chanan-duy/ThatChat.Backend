@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using Allure.NUnit;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using ThatChat.Backend.Data;
@@ -6,6 +7,7 @@ using ThatChat.Backend.Services;
 
 namespace ThatChat.Backend.Tests.Services;
 
+[AllureNUnit]
 public class ChatServiceTests
 {
 	private AppDbContext _context;

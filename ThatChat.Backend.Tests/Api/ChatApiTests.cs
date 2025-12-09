@@ -1,12 +1,14 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Allure.NUnit;
 using FluentAssertions;
 using ThatChat.Backend.Dto;
 using ThatChat.Backend.Tests.Infra;
 
 namespace ThatChat.Backend.Tests.Api;
 
+[AllureNUnit]
 public class ChatApiTests
 {
 	private CustomWebApplicationFactory _factory;

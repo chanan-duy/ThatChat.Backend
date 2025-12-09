@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Allure.NUnit;
 using FluentAssertions;
 using Microsoft.AspNetCore.SignalR.Client;
 using ThatChat.Backend.Data;
@@ -8,6 +9,7 @@ using ThatChat.Backend.Tests.Infra;
 
 namespace ThatChat.Backend.Tests.Hubs;
 
+[AllureNUnit]
 public class ChatHubTests
 {
 	private CustomWebApplicationFactory _factory;
