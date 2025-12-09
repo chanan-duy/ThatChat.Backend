@@ -33,4 +33,10 @@
         <ProjectReference Include="..\ThatChat.Backend\ThatChat.Backend.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <None Update="allureConfig.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
 </Project>
