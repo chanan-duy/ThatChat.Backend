@@ -1,0 +1,74 @@
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using FluentAssertions;
+using ThatChat.Backend.Dto;
+using ThatChat.Backend.Tests.Infra;
+
+namespace ThatChat.Backend.Tests.Api;
+
+public class ChatApiTests
+{
+	private CustomWebApplicationFactory _factory;
+	private HttpClient _client;
+
+	[SetUp]
+	public void Setup()
+	{
+		_factory = new CustomWebApplicationFactory();
+		_client = _factory.CreateClient();
+	}
+
+	[TearDown]
+	public void TearDown()
+	{
+		_client.Dispose();
+		_factory.Dispose();
+	}
+
+	private async Task<string> RegisterAndLogin(string email, string password)
+	{
+		var regResponse = await _client.PostAsJsonAsync("/api/auth/register", new { email, password });
+		regResponse.EnsureSuccessStatusCode();
+
+		var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", new { email, password });
+		loginResponse.EnsureSuccessStatusCode();
+
+		var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+		return loginResult!.AccessToken;
+	}
+
+	private record LoginResult(string AccessToken, string RefreshToken, int ExpiresIn);
+
+	[Test]
+	public async Task GetChats_ShouldReturnGlobalChat_ForNewUser()
+	{
+		var token = await RegisterAndLogin("newuser@test.com", "pass1234");
+		_client.DefaultRequestHeaders.Authorization =
+			new AuthenticationHeaderValue("Bearer", token);
+
+		var response = await _client.GetAsync("/api/chats");
+
+		response.EnsureSuccessStatusCode();
+		var chats = await response.Content.ReadFromJsonAsync<List<ChatDto>>();
+
+		chats.Should().Contain(c => c.IsGlobal == true);
+	}
+
+	[Test]
+	public async Task CreateChat_ShouldReturn200_WhenUserExists()
+	{
+		var tokenA = await RegisterAndLogin("userA@test.com", "pass1234");
+
+		await _client.PostAsJsonAsync("/api/auth/register", new { email = "userB@test.com", password = "pass1234" });
+
+		_client.DefaultRequestHeaders.Authorization =
+			new AuthenticationHeaderValue("Bearer", tokenA);
+
+		var response = await _client.PostAsJsonAsync("/api/chats", new CreateChatRequest("userB@test.com"));
+
+		response.EnsureSuccessStatusCode();
+		var chat = await response.Content.ReadFromJsonAsync<ChatDto>();
+		chat.Should().NotBeNull();
+		chat.Name.Should().Be("userB@test.com");
+	}
+}

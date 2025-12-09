@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThatChat.Backend", "ThatChat.Backend\ThatChat.Backend.csproj", "{BB0C716C-50DB-4318-B73F-1489A1AB193C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThatChat.Backend.Tests", "ThatChat.Backend.Tests\ThatChat.Backend.Tests.csproj", "{A222D130-E610-4DED-ABCD-6741A8FA9E53}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{BB0C716C-50DB-4318-B73F-1489A1AB193C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BB0C716C-50DB-4318-B73F-1489A1AB193C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BB0C716C-50DB-4318-B73F-1489A1AB193C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A222D130-E610-4DED-ABCD-6741A8FA9E53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A222D130-E610-4DED-ABCD-6741A8FA9E53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A222D130-E610-4DED-ABCD-6741A8FA9E53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A222D130-E610-4DED-ABCD-6741A8FA9E53}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
