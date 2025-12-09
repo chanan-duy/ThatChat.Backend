@@ -33,9 +33,7 @@
     },
     "CorsOrigins": [
         "http://localhost:5173",
-        "http://localhost:4173",
-        "http://192.168.3.111:5173",
-        "http://192.168.3.111:4173"
+        "http://localhost:4173"
     ]
 }
 ```
