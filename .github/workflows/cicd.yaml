@@ -32,9 +32,7 @@ jobs:
 
       - name: Run Tests with Allure
         run: |
-          dotnet test \
-            --no-restore \
-            --no-build
+          dotnet test --no-restore --no-build
 
       - name: Load Test Report History
         uses: actions/checkout@v6
