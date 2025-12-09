@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Scalar.AspNetCore;
 using ThatChat.Backend.Api;
 using ThatChat.Backend.Data;
@@ -71,7 +70,6 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddSignalR();
 
-builder.Services.TryAddSingleton(TimeProvider.System);
 builder.Services.AddScoped<LogMiddlewareService>();
 builder.Services.AddScoped<IFileUploader, FileUploaderService>();
 builder.Services.AddScoped<IChatService, ChatService>();

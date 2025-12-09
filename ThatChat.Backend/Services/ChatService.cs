@@ -4,7 +4,7 @@ using ThatChat.Backend.Dto;
 
 namespace ThatChat.Backend.Services;
 
-public class ChatService(AppDbContext db, TimeProvider timeProvider) : IChatService
+public class ChatService(AppDbContext db) : IChatService
 {
 	public async Task<bool> HasAccessToChatAsync(Guid userId, Guid chatId)
 	{
@@ -37,7 +37,7 @@ public class ChatService(AppDbContext db, TimeProvider timeProvider) : IChatServ
 			SenderId = userId,
 			Text = message,
 			FileUrl = fileUrl,
-			CreatedAt = timeProvider.GetUtcNow().DateTime,
+			CreatedAt = DateTime.UtcNow,
 		};
 
 		db.Messages.Add(msgEnt);

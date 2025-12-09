@@ -31,5 +31,16 @@ public class AppDbContext : IdentityDbContext<AppUserEnt, IdentityRole<Guid>, Gu
 				IsGlobal = true,
 			}
 		);
+
+		foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+		{
+			foreach (var property in entityType.GetProperties())
+			{
+				if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
+				{
+					property.SetValueConverter(new DateTimeUtcConverter());
+				}
+			}
+		}
 	}
 }
