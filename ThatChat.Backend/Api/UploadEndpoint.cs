@@ -1,4 +1,7 @@
-﻿namespace ThatChat.Backend.Api;
+﻿using Microsoft.AspNetCore.Mvc;
+using ThatChat.Backend.Services;
+
+namespace ThatChat.Backend.Api;
 
 public static class UploadEndpoint
 {
@@ -6,32 +9,25 @@ public static class UploadEndpoint
 	{
 		public RouteGroupBuilder MapUploadEndpoint()
 		{
-			group.MapPost("/upload", async (IFormFile? file) =>
-				{
-					if (file == null || file.Length == 0)
+			group.MapPost("/upload",
+					async (IFormFile? file, [FromServices] IFileUploader uploader) =>
 					{
-						return Results.BadRequest("No file uploaded");
-					}
+						const long maxFileSizeBytes = 20 * 1024 * 1024;
 
-					var ext = Path.GetExtension(file.FileName);
-					var newName = $"{Guid.CreateVersion7()}{ext}";
+						if (file == null || file.Length == 0)
+						{
+							return Results.BadRequest("No file");
+						}
 
-					var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-					if (!Directory.Exists(uploadPath))
-					{
-						Directory.CreateDirectory(uploadPath);
-					}
+						if (file.Length >= maxFileSizeBytes)
+						{
+							return Results.BadRequest($"Max file size is: {maxFileSizeBytes} bytes");
+						}
 
-					var fullPath = Path.Combine(uploadPath, newName);
+						var fileUrl = await uploader.UploadFileToRemote(file);
 
-					await using (var stream = new FileStream(fullPath, FileMode.Create))
-					{
-						await file.CopyToAsync(stream);
-					}
-
-					var fileUrl = $"/uploads/{newName}";
-					return Results.Ok(new { Url = fileUrl });
-				})
+						return Results.Ok(new { Url = fileUrl });
+					})
 				.RequireAuthorization()
 				.DisableAntiforgery();
 

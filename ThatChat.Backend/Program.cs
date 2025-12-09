@@ -9,10 +9,10 @@ using ThatChat.Backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connString = builder.Configuration.GetConnectionString("AppDbContext") ??
-                 throw new InvalidOperationException("Connection string 'AppDbContext' not found.");
+var connectionString = builder.Configuration.GetConnectionString("AppDbContext") ??
+                       throw new InvalidOperationException("Connection string 'AppDbContext' not found.");
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connString));
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
 
 builder.Services.AddAuthentication()
 	.AddBearerToken(IdentityConstants.BearerScheme);
@@ -71,6 +71,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 
 builder.Services.AddScoped<LogMiddlewareService>();
+builder.Services.AddScoped<IFileUploader, FileUploaderService>();
 
 var app = builder.Build();
 
@@ -95,7 +96,7 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => "Running");
+app.MapGet("/", () => "Works");
 
 app.MapGroup("/api").MapApi();
 

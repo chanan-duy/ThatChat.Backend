@@ -1,21 +1,11 @@
 ﻿using System.Security.Claims;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ThatChat.Backend.Data;
+using ThatChat.Backend.Dto;
 
 namespace ThatChat.Backend.Hubs;
-
-public record ChatMessageDto(
-	[UsedImplicitly] Guid Id,
-	Guid ChatId,
-	Guid SenderId,
-	string? SenderEmail,
-	string? Text,
-	string? FileUrl,
-	DateTime CreatedAt
-);
 
 public interface IChatClient
 {

@@ -3,4 +3,15 @@
 namespace ThatChat.Backend.Dto;
 
 [UsedImplicitly]
-internal record CreateChatRequest(string Email);
+public record CreateChatRequest(string Email);
+
+[UsedImplicitly]
+public record ChatMessageDto(
+	Guid Id,
+	Guid ChatId,
+	Guid SenderId,
+	string? SenderEmail,
+	string? Text,
+	string? FileUrl,
+	DateTime CreatedAt
+);
