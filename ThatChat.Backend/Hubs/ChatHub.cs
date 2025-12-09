@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,7 @@ using ThatChat.Backend.Data;
 namespace ThatChat.Backend.Hubs;
 
 public record ChatMessageDto(
-	Guid Id,
+	[UsedImplicitly] Guid Id,
 	Guid ChatId,
 	Guid SenderId,
 	string? SenderEmail,

@@ -1,9 +1,8 @@
-using System.Security.Claims;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
+using ThatChat.Backend.Api;
 using ThatChat.Backend.Data;
 using ThatChat.Backend.Hubs;
 using ThatChat.Backend.Services;
@@ -96,130 +95,10 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGroup("/api/auth").MapIdentityApi<AppUserEnt>();
+app.MapGet("/", () => "Running");
 
-app.MapPost("/api/upload", async (IFormFile? file) =>
-	{
-		if (file == null || file.Length == 0)
-		{
-			return Results.BadRequest("No file uploaded");
-		}
-
-		var ext = Path.GetExtension(file.FileName);
-		var newName = $"{Guid.CreateVersion7()}{ext}";
-
-		var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-		if (!Directory.Exists(uploadPath))
-		{
-			Directory.CreateDirectory(uploadPath);
-		}
-
-		var fullPath = Path.Combine(uploadPath, newName);
-
-		await using (var stream = new FileStream(fullPath, FileMode.Create))
-		{
-			await file.CopyToAsync(stream);
-		}
-
-		var fileUrl = $"/uploads/{newName}";
-		return Results.Ok(new { Url = fileUrl });
-	})
-	.RequireAuthorization()
-	.DisableAntiforgery();
-
-app.MapGet("/api/chats", async (AppDbContext db, ClaimsPrincipal user) =>
-	{
-		var userId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-		var chats = await db.Chats
-			.Include(c => c.ChatUsers)
-			.Where(c => c.IsGlobal || c.ChatUsers.Any(cu => cu.UserId == userId))
-			.Select(c => new
-			{
-				c.Id,
-				c.Name,
-				c.IsGlobal,
-			})
-			.ToListAsync();
-
-		return Results.Ok(chats);
-	})
-	.RequireAuthorization();
-
-
-app.MapPost("/api/chats", async (CreateChatRequest req, AppDbContext db, ClaimsPrincipal user) =>
-	{
-		var currentUserId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-		var targetUser = await db.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
-		if (targetUser == null)
-		{
-			return Results.NotFound("Пользователь с таким Email не найден");
-		}
-
-		if (targetUser.Id == currentUserId)
-		{
-			return Results.BadRequest("Нельзя создать чат с самим собой");
-		}
-
-		var existingChat = await db.Chats
-			.Where(c => !c.IsGlobal)
-			.Where(c => c.ChatUsers.Any(cu => cu.UserId == currentUserId) &&
-			            c.ChatUsers.Any(cu => cu.UserId == targetUser.Id))
-			.FirstOrDefaultAsync();
-
-		if (existingChat != null)
-		{
-			return Results.Ok(new { existingChat.Id, existingChat.Name, existingChat.IsGlobal });
-		}
-
-		var newChat = new ChatEnt
-		{
-			Id = Guid.NewGuid(),
-			Name = targetUser.Email,
-			IsGlobal = false,
-		};
-
-		db.Chats.Add(newChat);
-
-		db.ChatUsers.Add(new ChatUserEnt { ChatId = newChat.Id, UserId = currentUserId });
-		db.ChatUsers.Add(new ChatUserEnt { ChatId = newChat.Id, UserId = targetUser.Id });
-
-		await db.SaveChangesAsync();
-
-		return Results.Ok(new { newChat.Id, newChat.Name, newChat.IsGlobal });
-	})
-	.RequireAuthorization();
-
-app.MapGet("/api/chats/{chatId:guid}/messages", async (Guid chatId, AppDbContext db) =>
-	{
-		var messages = await db.Messages
-			.Where(m => m.ChatId == chatId)
-			.OrderBy(m => m.CreatedAt)
-			.Select(m => new
-			{
-				m.Id,
-				m.ChatId,
-				m.SenderId,
-				SenderEmail = m.Sender.Email,
-				m.Text,
-				m.FileUrl,
-				m.CreatedAt,
-			})
-			.ToListAsync();
-
-		return Results.Ok(messages);
-	})
-	.RequireAuthorization();
-
+app.MapGroup("/api").MapApi();
 
 app.MapHub<ChatHub>("/hubs/chat");
 
-app.MapGet("/", () => "Running");
-
 app.Run();
-
-return;
-
-[UsedImplicitly]
-internal record CreateChatRequest(string Email);
