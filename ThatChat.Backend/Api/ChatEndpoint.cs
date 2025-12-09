@@ -1,7 +1,9 @@
 ﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ThatChat.Backend.Data;
 using ThatChat.Backend.Dto;
+using ThatChat.Backend.Services;
 
 namespace ThatChat.Backend.Api;
 
@@ -31,48 +33,15 @@ public static class ChatEndpoint
 				.RequireAuthorization();
 
 
-			group.MapPost("/", async (CreateChatRequest req, AppDbContext db, ClaimsPrincipal user) =>
-				{
-					var currentUserId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-					var targetUser = await db.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
-					if (targetUser == null)
+			group.MapPost("/",
+					async (CreateChatRequest req, AppDbContext db, ClaimsPrincipal user, [FromServices] IChatService chatService) =>
 					{
-						return Results.NotFound("Пользователь с таким Email не найден");
-					}
+						var currentUserId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-					if (targetUser.Id == currentUserId)
-					{
-						return Results.BadRequest("Нельзя создать чат с самим собой");
-					}
+						var dto = await chatService.CreateOrGetPrivateChatAsync(currentUserId, req.Email);
 
-					var existingChat = await db.Chats
-						.Where(c => !c.IsGlobal)
-						.Where(c => c.ChatUsers.Any(cu => cu.UserId == currentUserId) &&
-						            c.ChatUsers.Any(cu => cu.UserId == targetUser.Id))
-						.FirstOrDefaultAsync();
-
-					if (existingChat != null)
-					{
-						return Results.Ok(new { existingChat.Id, existingChat.Name, existingChat.IsGlobal });
-					}
-
-					var newChat = new ChatEnt
-					{
-						Id = Guid.NewGuid(),
-						Name = targetUser.Email,
-						IsGlobal = false,
-					};
-
-					db.Chats.Add(newChat);
-
-					db.ChatUsers.Add(new ChatUserEnt { ChatId = newChat.Id, UserId = currentUserId });
-					db.ChatUsers.Add(new ChatUserEnt { ChatId = newChat.Id, UserId = targetUser.Id });
-
-					await db.SaveChangesAsync();
-
-					return Results.Ok(new { newChat.Id, newChat.Name, newChat.IsGlobal });
-				})
+						return Results.Ok(new { dto.Chat.Id, dto.Chat.Name, dto.Chat.IsGlobal });
+					})
 				.RequireAuthorization();
 
 			group.MapGet("/{chatId:guid}/messages", async (Guid chatId, AppDbContext db) =>
