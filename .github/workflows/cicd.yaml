@@ -46,6 +46,10 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
+      - name: Remove History Checkout Metadata
+        if: always()
+        run: rm -rf gh-pages/.git
+
       - name: Build Test Report
         id: allure
         uses: simple-elf/allure-report-action@v1.15
