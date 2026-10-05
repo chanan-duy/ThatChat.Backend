@@ -47,7 +47,8 @@ jobs:
           path: gh-pages
 
       - name: Build Test Report
-        uses: simple-elf/allure-report-action@v1.13
+        id: allure
+        uses: simple-elf/allure-report-action@v1.15
         if: always()
         with:
           gh_pages: gh-pages
@@ -56,7 +57,7 @@ jobs:
 
       - name: Publish Test Report
         uses: peaceiris/actions-gh-pages@v4
-        if: always()
+        if: ${{ always() && steps.allure.outcome == 'success' }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
